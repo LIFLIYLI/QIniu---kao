@@ -1,0 +1,274 @@
+		mui.plusReady(function() {
+			//定位			
+			//获取当前定位通道
+			plus.geolocation.getCurrentPosition(MapPoint, function(e) {
+				mui.toast("error:" + e.message);
+			})
+			//获取当前定位函数
+			function MapPoint(position) {
+				address.Province = position.address.province
+				address.City = position.address.city
+				address.Country = position.address.district + "," + position.address.street + "," + position.address.streetNum;
+				address.longitude = position.coords.longitude + ""; //获取经度
+				address.latitude = position.coords.latitude + ""; //获取纬度
+			}
+			//系统匹配---IOS-Andior
+			$(function() {
+				var u = navigator.userAgent,
+					app = navigator.appVersion;
+				var isAndroid = u.indexOf('Android') > -1 || u.indexOf('Linux') > -1; //g
+				var isIOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终端
+				if(isAndroid) {
+					//这个是安卓操作系统
+					//点击按钮相册/录制-选择
+					$(".picture_select_border").on("tap", function() {
+						console.log('视频')
+						$('.box_div').show();
+						$(".bottom_center").animate({
+							bottom: "0px"
+						});
+					});
+					//录制按钮--,
+					$(".bottom_center_btns div").eq(0).on("tap", function() {
+						console.log("录制");
+						$(".box_div").hide();
+						CameraViod();
+						event.stopPropagation();
+					});
+				}
+
+				if(isIOS) {　 //这个是ios操作系统
+					var template = ''
+					template += '<form type="hidden" id="myform" name="myform" action="your_url" method="post" enctype="multipart/form-data">' +
+						'<input class="input_hidden" id="videoForm" type="file" name="videos[]" multiple="multiple" accept="video/mp4"/>' +
+						'</form>'
+					$('#IOSupload').append(template)
+				}
+			});
+			//监听IOS视频表单内容变化
+			$('#videoForm').on('change', function() {
+				event.preventDefault();
+				todoActive('#videoForm')
+			});
+			//监听android表单变化
+			$('#videoFormA').on('change', function() {
+				event.preventDefault();
+				todoActive('#videoFormA')
+			})
+			//监听IOS-Android事件后执行函数
+			function todoActive(id) {
+				$('#videoBoxShow').show()
+				$('#parentIOSupload').hide()
+				//获取视频文件信息
+				var file = $(id)[0].files[0]
+				url = window.URL || window.webkitURL || window.mozURL;
+				var src = url.createObjectURL(file)
+				console.log(src)
+				$('#video').attr('src', src)
+				//获取时长
+				var audioElement = new Audio(src);       
+				var duration;       
+				audioElement.addEventListener("loadedmetadata", function(_event) {           
+					duration = audioElement.duration;           
+					console.log(duration + 's');       
+				});
+			}
+			//相机录制
+			function CameraViod() {
+				var cmr = plus.camera.getCamera(); //获取相机
+				cmr.startVideoCapture(function(path) {
+					//录像---待定
+					plus.io.resolveLocalFileSystemURL(path, function(entry) {
+						var src = entry.toLocalURL();
+						$('#videoBoxShow').show()
+						$('#parentIOSupload').hide()
+						$('#video').attr('src', src)
+			
+						plusUpload(path)//改
+						entry.file(function(file) {
+							var fileReader = new plus.io.FileReader();
+							console.log("文件名称" + file.name + "文件大小" + file.size);
+						});
+					}, function(e) {
+						console.log("读取录像文件错误：" + e.message);
+					});
+				}, function(e) {
+					plus.nativeUI.toast("录像取消！");
+				}, {
+					filename: "_doc/camera/", //文件保存目录
+					index: 1
+				});
+			}
+		});
+		//返回
+		$(".gogo").on("tap", function() {
+			$(".add_ershou_mask").css("display", "block");
+			return false;
+		});
+		//退出编辑
+		$(".mask_giveup").on("tap", function() {
+			$(".add_ershou_mask").css("display", "none");
+			document.activeElement.blur();
+			mui.back();
+		})
+		//继续编辑
+		$(".mask_sure").on("tap", function() {
+			$(".add_ershou_mask").css("display", "none");
+		})
+		//上下动画
+		$(".box_div").on("tap", function() {
+			$(".bottom_center").animate({
+				bottom: "-500px"
+			}, function() {
+				$(".box_div").hide();
+			});
+		});
+		//监听input内容变化-目前没什么用
+		document.getElementById("inputText").addEventListener('input', function() {
+			//console.log(1)
+		})
+		//删除当前视频
+		$('body').on('tap', '#videoRemove', function(e) {
+			e.stopPropagation()
+			if($("#myform").get(0)) {
+				$("#myform").get(0).reset()
+			} else {
+				$("#myformA").get(0).reset()
+			}
+			$('#videoBoxShow').hide()
+			$('#parentIOSupload').show()
+			$('#video').attr('src', '')
+		})
+
+		//点击发布按钮----全----存文件到七牛l//
+		$('body').on('tap', '#add_btn', function() {
+			var title = $('#inputText').val()
+			var content = $('#write_ershou_biaoarea').val()
+			var kurl = $('#video').attr('src')
+			if(kurl) {} else {
+				mui.toast('你还没有录制视频')
+				return
+			}
+			//判断是否输入内容
+			if(title && title != '') {} else {
+				mui.toast('请输入标题')
+				return
+			}
+			if(content && content != '') {} else {
+				mui.toast('请输入说明')
+				return
+			}
+			$(function() {
+				var u = navigator.userAgent,
+					app = navigator.appVersion;
+				var isAndroid = u.indexOf('Android') > -1 || u.indexOf('Linux') > -1; //g
+				var isIOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/); //ios终端
+				if(isAndroid) {
+					QNuploader('#videoFormA')
+				}
+				if(isIOS) {
+					QNuploader('#videoForm')
+				}
+			});
+		})
+
+		//android摄像头uploader上传
+		function plusUpload(file) {
+			$.ajax({
+				type: 'GET',
+				url: 'http://ka1.yq80.cn/api/common/getTokener',
+			}).done(function(res) {
+
+				var domain = "http://zf.yq80.cn/";
+				// 生成一个随机名字作为上传到七牛云后的文件名
+				var randName = 'm4a1'
+				var task = plus.uploader.createUpload(
+					// 不同的存储空间上传地址可能不一样，运行后根据返回信息做更改
+					"http://upload.qiniu.com/", {
+						method: "POST",
+						blocksize: 204800,
+						priority: 100
+					},
+					function(t, status) {
+						// 上传完成
+						if(status == 200) {
+							console.log("Upload success: " + t.url);
+							// 拼接出上传到去七牛云后的图片链接地址
+							//var imgUrl = domain + randName; 
+						} else {
+							console.log("Upload failed: " + status);
+						}
+					}
+				);
+				// 添加上传文件，key 值必须是七牛云所需文件对应的 key 值 "file"
+				task.addFile(file, {
+					key: "file",
+					mime: "video/mp4"
+				});
+				// 上传到七牛云后文件的名字
+				task.addData("key", randName);
+				// 七牛云所需 token
+				task.addData("token", res.uptoken);
+				task.start();
+			})
+		}
+
+		//ios全+android相册form上传
+		function QNuploader(id) {
+			$.ajax({
+				type: 'GET',
+				url: 'http://ka1.yq80.cn/api/common/getTokener',
+			}).done(function(res) {
+				var token = res.uptoken
+				var formData = new FormData(),
+					vistUrl = 'zf.yq80.cn',
+					fS = null,
+					fStota = null;
+				formData.append('file', $(id)[0].files[0]);
+				formData.append('token', token)
+				$.ajax({
+					url: 'http://upload.qiniup.com',
+					type: 'POST',
+					cache: false,
+					data: formData,
+					processData: false,
+					dataType: 'json',
+					contentType: false,
+				}).done(function(res) {
+					console.log('上传成功')
+					//拼接返回的视频地址，这里的vframe/jpb/offset/1是七牛的视频截取图片的接口
+					console.log(JSON.stringify(res))
+					//backgroundAjax(urll)
+				}).fail(function(e) {
+					alert(JSON.stringify(e))
+					console.log('上传失败,未上传')
+				}).fail(function() {
+					console.log('返回失败,未响应')
+				})
+			})
+		}
+		//发至后台的存储
+		function backgroundAjax(urll) {
+			var Title = $('#inputText').val()
+			var Content = $('#write_ershou_biaoarea').val()
+			var userid = localStorage.getItem('userid')
+			$.ajax({
+				type: 'post',
+				url: "http://ka1.yq80.cn/addvpeo",
+				data: {
+					category_id: 3,
+					title: Title,
+					content: Content,
+					video: urll,
+					user_id: userid,
+					//address: address,
+				},
+				success: function() {
+					mui.toast('发布成功')
+					console.log('存后台成功')
+				},
+				error: function(a, b, v) {
+					console.log('存后台失败')
+				}
+			})
+		}
